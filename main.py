@@ -17,6 +17,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         description="Call Bridge Card Game with Intelligent MCTS & Heuristic Max^n AI Agents (HTML5/CSS3 UI)"
     )
     parser.add_argument(
+        "--host",
+        default="127.0.0.1",
+        help="Interface for the web server to bind to. Use 0.0.0.0 inside a container.",
+    )
+    parser.add_argument(
         "--port",
         type=int,
         default=8765,
@@ -78,7 +83,12 @@ def main(argv: list[str] | None = None) -> int:
         mcts_agent2_budget=args.mcts2_budget,
         maxn_search_depth=args.maxn_depth,
     )
-    run_web_ui(config=config, port=args.port, open_browser=not args.no_browser)
+    run_web_ui(
+        config=config,
+        host=args.host,
+        port=args.port,
+        open_browser=not args.no_browser,
+    )
     return 0
 
 

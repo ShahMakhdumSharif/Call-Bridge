@@ -1,4 +1,4 @@
-# Call Bridge
+# [Call Bridge](https://github.com/ShahMakhdumSharif/Call-Bridge)
 
 Call Bridge is a four-player trick-taking game with a browser UI and three AI opponents. The project is built around a Python game engine, a small JSON-over-HTTP interface, and imperfect-information search agents.
 
@@ -101,8 +101,8 @@ The session runs AI decisions on a single-worker executor, keeping search work o
 Requirements: Python 3.10 or later. Runtime dependencies use only the Python standard library.
 
 ```bash
-git clone <repository-url>
-cd "Call Bridge"
+git clone https://github.com/ShahMakhdumSharif/Call-Bridge.git
+cd Call-Bridge
 python3 -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
 python -m pip install -r requirements.txt
@@ -110,6 +110,24 @@ python main.py
 ```
 
 The server opens the game at [http://127.0.0.1:8765](http://127.0.0.1:8765). Stop it with `Ctrl+C` in the terminal.
+
+## Run with Docker
+
+Build the image from the repository root:
+
+```bash
+docker build -t call-bridge:local .
+```
+
+Start the container and publish port `8765` on your machine:
+
+```bash
+docker run --rm --name call-bridge -p 8765:8765 call-bridge:local
+```
+
+Open [http://localhost:8765](http://localhost:8765). Stop the container with `Ctrl+C`. To run it in the background, add `-d` and stop it with `docker stop call-bridge`.
+
+The container listens on `0.0.0.0` internally so Docker can forward the published port. It runs as a non-root user and includes a health check. Game state is held in memory and resets when the container is recreated. The image installs no packages because the application uses only the Python standard library; `pytest` is needed only for local tests.
 
 ### AI settings
 
@@ -119,6 +137,8 @@ Defaults are 500 simulations for each MCTS agent and depth 4 for Maxⁿ. Setting
 python main.py --mcts1-budget 1000 --mcts2-budget 500 --maxn-depth 4
 python main.py --port 9000 --no-browser
 ```
+
+The web server binds to `127.0.0.1` by default. Use `--host 0.0.0.0` when you need it reachable through a container or another network interface.
 
 ### Tests and evaluation
 
