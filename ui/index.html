@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Call Bridge — Royal Tournament Edition (MCTS &amp; Maxⁿ AI)</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+
+<!-- ================= HOME SCREEN ================= -->
+<div id="homeOverlay" class="screen-overlay">
+  <div class="hero-cards" id="heroCards"></div>
+  <h1 class="hero-title" style="margin-bottom: 24px;">CALL BRIDGE</h1>
+  <div class="menu-buttons">
+    <button class="btn primary" onclick="startMatchFromHome()">Start New Match</button>
+    <button class="btn" onclick="openSettingsModal()">AI Budget &amp; Depth Settings</button>
+    <button class="btn" onclick="openRulesModal()">How to Play &amp; Scoring Rules</button>
+  </div>
+</div>
+
+<!-- ================= MAIN GAME TABLE ================= -->
+<div class="game-container">
+  <!-- Top-Left Live HUD Scoreboard -->
+  <div class="hud-scoreboard">
+    <div class="hud-header">
+      <span id="hudRoundTrick">ROUND 1 &bull; TRICK 1/13</span>
+      <span>TRUMP: SPADES ♠</span>
+    </div>
+    <div class="hud-meta">
+      <span id="hudDealer">Dealer: Player 4</span>
+      <span id="hudLead">1st Lead: Player 1</span>
+    </div>
+    <table class="hud-table">
+      <thead>
+        <tr><th>Player</th><th>Bid</th><th>Won</th><th>Score</th></tr>
+      </thead>
+      <tbody id="hudTableBody"></tbody>
+    </table>
+  </div>
+
+  <!-- Top-Right Controls -->
+  <div class="top-actions">
+    <button class="btn" onclick="openSettingsModal()">⚙ AI Budget &amp; Depth</button>
+    <button class="btn" onclick="showHomeScreen()">⌂ Home Menu</button>
+  </div>
+
+  <!-- 4 Player Seat Plaques: Bottom (You), Right (MCTS-1), Top (MCTS-2), Left (Max^n) -->
+  <div id="seat-0" class="seat-plaque seat-bottom"></div>
+  <div id="seat-1" class="seat-plaque seat-right"></div>
+  <div id="seat-2" class="seat-plaque seat-top"></div>
+  <div id="seat-3" class="seat-plaque seat-left"></div>
+
+  <!-- Center Casino Felt Table -->
+  <div class="casino-table">
+    <div class="center-compass">
+      <div class="big-spade">♠</div>
+      <div class="label">TRUMP: SPADES &bull; ↺ ANTI-CLOCKWISE</div>
+    </div>
+
+    <div class="trick-arena">
+      <div id="slot-0" class="trick-slot slot-0">You</div>
+      <div id="slot-1" class="trick-slot slot-1">MCTS-1</div>
+      <div id="slot-2" class="trick-slot slot-2">MCTS-2</div>
+      <div id="slot-3" class="trick-slot slot-3"><span class="latex-math">Max<sup>n</sup></span></div>
+    </div>
+  </div>
+
+  <!-- Status Banner & Human Hand Row -->
+  <div id="statusBanner" class="status-banner">Welcome to Call Bridge!</div>
+  <div id="humanHand" class="human-hand-container"></div>
+</div>
+
+<!-- ================= FLOATING HUMAN BIDDING PANEL ================= -->
+<div id="bidModal" class="bid-floating-panel hidden">
+  <h2 class="modal-title" style="font-size: 20px; margin-bottom: 14px;">YOUR TURN TO BID</h2>
+  <div id="bidGrid" class="bid-grid" style="margin-bottom: 14px;"></div>
+  <button class="btn gold" style="width: 220px; padding: 10px 18px;" onclick="confirmHumanBid()">Confirm &amp; Submit Bid</button>
+</div>
+
+<!-- ================= AI BUDGET & DEPTH SETTINGS MODAL (MANUAL INPUTS) ================= -->
+<div id="settingsModal" class="modal-backdrop hidden">
+  <div class="modal-card">
+    <h2 class="modal-title">AI SIMULATION BUDGET &amp; SEARCH DEPTH</h2>
+    <div class="modal-subtitle">
+      Type any custom integer directly into the boxes below or click a quick preset.
+    </div>
+
+    <div class="settings-row">
+      <div class="settings-info">
+        <h4>Player 2 — MCTS Agent 1 Simulation Budget</h4>
+        <p>UCT Selection (C = 1.414) + Goal-Directed Strategic Rollouts</p>
+      </div>
+      <div class="settings-controls">
+        <input id="inputMcts1" type="number" class="num-input" min="10" max="50000" step="50" value="500" />
+        <button class="preset-pill" onclick="setInputVal('inputMcts1', 100)">100</button>
+        <button class="preset-pill" onclick="setInputVal('inputMcts1', 500)">500</button>
+        <button class="preset-pill" onclick="setInputVal('inputMcts1', 1000)">1000</button>
+        <button class="preset-pill" onclick="setInputVal('inputMcts1', 5000)">5000</button>
+      </div>
+    </div>
+
+    <div class="settings-row">
+      <div class="settings-info">
+        <h4>Player 3 — MCTS Agent 2 Simulation Budget</h4>
+        <p>Independent MCTS (C = 0.90) + Tactical Trump-Conserving Rollouts</p>
+      </div>
+      <div class="settings-controls">
+        <input id="inputMcts2" type="number" class="num-input" min="10" max="50000" step="50" value="500" />
+        <button class="preset-pill" onclick="setInputVal('inputMcts2', 100)">100</button>
+        <button class="preset-pill" onclick="setInputVal('inputMcts2', 500)">500</button>
+        <button class="preset-pill" onclick="setInputVal('inputMcts2', 1000)">1000</button>
+        <button class="preset-pill" onclick="setInputVal('inputMcts2', 5000)">5000</button>
+      </div>
+    </div>
+
+    <div class="settings-row">
+      <div class="settings-info">
+        <h4>Player 4 — Heuristic <span class="latex-math">Max<sup>n</sup></span> Search Depth</h4>
+        <p>4-Player Vector Utility Maximization (1 to 12 plies)</p>
+      </div>
+      <div class="settings-controls">
+        <input id="inputMaxn" type="number" class="num-input" min="1" max="12" step="1" value="4" />
+        <button class="preset-pill" onclick="setInputVal('inputMaxn', 2)">D=2</button>
+        <button class="preset-pill" onclick="setInputVal('inputMaxn', 3)">D=3</button>
+        <button class="preset-pill" onclick="setInputVal('inputMaxn', 4)">D=4</button>
+        <button class="preset-pill" onclick="setInputVal('inputMaxn', 5)">D=5</button>
+      </div>
+    </div>
+
+    <div style="display:flex; justify-content:center; gap:14px; margin-top:20px;">
+      <button class="btn gold" style="width: 220px;" onclick="saveAiSettings()">Apply Settings</button>
+      <button class="btn" style="width: 160px;" onclick="closeSettingsModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= HOW TO PLAY MODAL ================= -->
+<div id="rulesModal" class="modal-backdrop hidden">
+  <div class="modal-card" style="text-align:left;">
+    <h2 class="modal-title" style="text-align:center;">HOW TO PLAY CALL BRIDGE</h2>
+    <ul style="line-height:1.7; font-size:14.5px; color:#e4f2eb;">
+      <li><b>4 Individual Players:</b> You (Bottom), MCTS Agent 1 (Right), MCTS Agent 2 (Top), Heuristic <span class="latex-math">Max<sup>n</sup></span> (Left). Every player receives 13 cards.</li>
+      <li><b>Permanent Spades Trump (♠):</b> Spades is always trump. Card ranking within each suit: <code>2 &lt; 3 &lt; 4 &lt; 5 &lt; 6 &lt; 7 &lt; 8 &lt; 9 &lt; 10 &lt; J &lt; Q &lt; K &lt; A</code>.</li>
+      <li><b>Independent Bidding (0–13):</b> Before play begins, each player bids 0–13 tricks in anti-clockwise order. The sum of bids does not need to equal 13.</li>
+      <li><b>Playing Tricks:</b> Lead player may play any card. Other players must follow the lead suit if able; if void in lead suit, any card may be played. Highest Spade wins; otherwise highest card of the lead suit wins and leads next.</li>
+      <li><b>Scoring Formula:</b> Let <code>b</code> = bid and <code>t</code> = tricks won:
+        <code>t &lt; b &rarr; -b</code> &nbsp;|&nbsp; <code>t == b &rarr; +b</code> &nbsp;|&nbsp; <code>t == b + 1 &rarr; 0</code> &nbsp;|&nbsp; <code>t &gt; b + 1 &rarr; -(t - b - 1)</code>.
+      </li>
+      <li><b>16-Point Victory:</b> Scores accumulate across rounds. First player to reach or exceed <b>16 points</b> after a completed round wins immediately!</li>
+    </ul>
+    <div style="text-align:center; margin-top:18px;">
+      <button class="btn gold" style="width:200px;" onclick="closeRulesModal()">Got It</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= ROUND RESULTS & GAME OVER MODAL ================= -->
+<div id="endModal" class="modal-backdrop hidden">
+  <div class="modal-card">
+    <h2 id="endModalTitle" class="modal-title">ROUND COMPLETE</h2>
+    <div id="endModalBanner" class="modal-subtitle" style="font-size:16px; font-weight:700; color:var(--emerald);"></div>
+    <table class="results-table">
+      <thead>
+        <tr><th>Player</th><th>AI Strategy</th><th>Bid</th><th>Tricks Won</th><th>Round Score</th><th>Cumulative Score</th></tr>
+      </thead>
+      <tbody id="endModalTableBody"></tbody>
+    </table>
+    <div id="endModalButtons" style="display:flex; justify-content:center; gap:14px;"></div>
+  </div>
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>
